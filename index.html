@@ -47,7 +47,7 @@
   .cdlabel{font-size:9px;color:#4a7898;letter-spacing:1px}
   .cdbg{width:80px;height:4px;background:#0c1e2e;border-radius:2px;overflow:hidden}
   .cdfill{height:100%;background:#1d9e75;border-radius:2px;transition:width .05s}
-  #timer-display{font-size:20px;font-weight:bold;color:#c8e4f8;letter-spacing:3px;text-align:center;line-height:1}
+  #timer-display{font-size:20px;font-family:'Courier New',monospace;font-weight:bold;color:#c8e4f8;letter-spacing:3px;text-align:center;line-height:1}
   #timer-display.warn{color:#d85a30;animation:tblink .5s infinite}
   @keyframes tblink{0%,100%{opacity:1}50%{opacity:.35}}
   #round-row{display:flex;gap:5px;justify-content:center;margin-top:4px;flex-wrap:wrap;max-width:200px}
@@ -63,7 +63,7 @@
 
   /* canvas */
   #cwrap{position:relative;line-height:0}
-  canvas{display:block;width:100%;cursor:crosshair;border-radius:0 0 8px 8px}
+  canvas{display:block;width:100%;cursor:none;border-radius:0 0 8px 8px}
 
   /* overlays */
   .overlay{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;
@@ -97,7 +97,7 @@
   #olm{font-size:11px;color:#4a7898;text-align:center;margin:0}
 
   /* gamemode */
-  #gm-overlay h3{font-size:14px;letter-spacing:5px;color:#c8e4f8}
+  #gm-overlay h3{font-size:13px;letter-spacing:5px;color:#c8e4f8;font-family:'Courier New',monospace}
   .gm-row{display:flex;gap:10px}
   .gm-card{width:165px;padding:14px 12px;border:1px solid #1a3a5c;border-radius:6px;
            cursor:pointer;background:rgba(15,26,39,0.6);text-align:center;transition:border-color .2s,background .2s}
@@ -105,12 +105,12 @@
   .gm-card.active-parry{border-color:#f0d060;background:rgba(240,208,96,0.06)}
   .gm-card.active-walls{border-color:#4a90c8;background:rgba(74,144,200,0.06)}
   .gm-card.active-ar{border-color:#e05050;background:rgba(224,80,80,0.06)}
-  .gm-icon{font-size:22px;margin-bottom:6px}
-  .gm-title{font-size:11px;letter-spacing:3px;margin-bottom:4px}
+  .gm-icon{width:36px;height:36px;margin:0 auto 8px;display:block}
+  .gm-title{font-size:11px;letter-spacing:3px;margin-bottom:4px;font-family:'Courier New',monospace}
   .gm-title.parry-title{color:#f0d060}
   .gm-title.walls-title{color:#4a90c8}
   .gm-title.ar-title{color:#e05050}
-  .gm-desc{font-size:9px;color:#4a7898;line-height:1.7;letter-spacing:0.3px}
+  .gm-desc{font-size:9px;color:#4a7898;line-height:1.7;letter-spacing:0.3px;font-family:'Courier New',monospace}
 
   /* gear */
   #gear-btn{position:absolute;bottom:10px;right:10px;width:28px;height:28px;
@@ -137,6 +137,11 @@
   <div id="hud">
     <div class="pi">
       <div class="pilabel">▶ YOU</div>
+      <div id="p-hud-hp" style="display:none;margin-top:2px">
+        <div style="width:80px;height:5px;background:#0c1e2e;border-radius:2px;overflow:hidden">
+          <div id="p-hud-hp-fill" style="height:100%;background:#1d9e75;border-radius:2px;transition:width .15s;width:100%"></div>
+        </div>
+      </div>
       <div class="amrow" id="pam"></div>
       <div class="parry-ind" id="p-parry-ind">
         <div class="parry-bar-bg"><div class="parry-bar-fill" id="p-parry-fill" style="width:100%"></div></div>
@@ -168,6 +173,11 @@
 
     <div class="pi" style="align-items:flex-end">
       <div class="pilabel">BOT ◀</div>
+      <div id="b-hud-hp" style="display:none;margin-top:2px">
+        <div style="width:80px;height:5px;background:#0c1e2e;border-radius:2px;overflow:hidden">
+          <div id="b-hud-hp-fill" style="height:100%;background:#d85a30;border-radius:2px;transition:width .15s;width:100%"></div>
+        </div>
+      </div>
       <div class="amrow" id="bam" style="justify-content:flex-end"></div>
       <div class="parry-ind" id="b-parry-ind" style="align-items:flex-end">
         <div class="parry-bar-bg"><div class="parry-bar-fill" id="b-parry-fill" style="width:100%"></div></div>
@@ -195,14 +205,13 @@
     <div class="overlay show" id="ol">
       <h2 id="olt">S N A P</h2>
       <!-- extra spacing via h2 margin-bottom:8px + gap:10px already = 18px effective -->
-      <div id="mode-badge" class="m-parry" onclick="openGamemodes()">⚡ CLASSIC ▾</div>
+      <div id="mode-badge" class="m-parry" onclick="openGamemodes()">◈ CLASSIC ▾</div>
       <p id="olm" style="display:none"></p>
       <div id="difrow">
         <button class="difbtn active" onclick="setDif('easy',this)">Easy</button>
         <button class="difbtn" onclick="setDif('medium',this)">Medium</button>
         <button class="difbtn" onclick="setDif('hard',this)">Hard</button>
       </div>
-      <button class="obtn-sm" onclick="openGamemodes()">GAMEMODE</button>
       <button class="obtn" id="sbtn" onclick="beginCountdown()">START</button>
     </div>
 
@@ -210,17 +219,33 @@
       <h3>SELECT GAMEMODE</h3>
       <div class="gm-row">
         <div class="gm-card active-parry" id="gm-parry" onclick="selectMode('parry')">
-          <div class="gm-icon">⚡</div>
+          <svg class="gm-icon" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M18 3 L30 8 L30 19 C30 26 24 31 18 33 C12 31 6 26 6 19 L6 8 Z" stroke="#f0d060" stroke-width="1.5" fill="rgba(240,208,96,0.12)"/>
+            <path d="M20 11 L15 20 L18.5 20 L16 27 L22 18 L18.5 18 Z" fill="#f0d060"/>
+          </svg>
           <div class="gm-title parry-title">CLASSIC</div>
           <div class="gm-desc">Parry bullets back.<br>Fixed wall map.<br>One hit = out.</div>
         </div>
         <div class="gm-card" id="gm-walls" onclick="selectMode('walls')">
-          <div class="gm-icon">🧱</div>
+          <svg class="gm-icon" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="4" y="7" width="13" height="6" rx="1" stroke="#4a90c8" stroke-width="1.2" fill="rgba(74,144,200,0.18)"/>
+            <rect x="19" y="7" width="13" height="6" rx="1" stroke="#4a90c8" stroke-width="1.2" fill="rgba(74,144,200,0.18)"/>
+            <rect x="4" y="15" width="28" height="6" rx="1" stroke="#4a90c8" stroke-width="1.2" fill="rgba(74,144,200,0.18)"/>
+            <rect x="4" y="23" width="13" height="6" rx="1" stroke="#4a90c8" stroke-width="1.2" fill="rgba(74,144,200,0.18)"/>
+            <rect x="19" y="23" width="13" height="6" rx="1" stroke="#4a90c8" stroke-width="1.2" fill="rgba(74,144,200,0.18)"/>
+          </svg>
           <div class="gm-title walls-title">BUILD</div>
           <div class="gm-desc">Place unlimited walls.<br>Cooldown only.<br>One hit = out.</div>
         </div>
         <div class="gm-card" id="gm-ar" onclick="selectMode('ar')">
-          <div class="gm-icon">🔫</div>
+          <svg class="gm-icon" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="2" y="15" width="19" height="4" rx="1" fill="rgba(224,80,80,0.2)" stroke="#e05050" stroke-width="1.2"/>
+            <rect x="9" y="12" width="16" height="10" rx="1.5" fill="rgba(224,80,80,0.2)" stroke="#e05050" stroke-width="1.2"/>
+            <path d="M25 14 L34 12 L34 24 L25 22 Z" fill="rgba(224,80,80,0.18)" stroke="#e05050" stroke-width="1.2"/>
+            <rect x="16" y="22" width="5" height="7" rx="1" fill="rgba(224,80,80,0.2)" stroke="#e05050" stroke-width="1.1"/>
+            <rect x="17" y="10" width="5" height="3" rx="0.5" fill="rgba(224,80,80,0.2)" stroke="#e05050" stroke-width="1"/>
+            <path d="M11 22 L9 30 L13 30 L14 22" fill="rgba(224,80,80,0.18)" stroke="#e05050" stroke-width="1"/>
+          </svg>
           <div class="gm-title ar-title">AR</div>
           <div class="gm-desc">Full-auto rifle.<br>15 rounds, 2s reload (R).<br>10 hits = eliminated.</div>
         </div>
@@ -267,11 +292,11 @@ const MATCH_TIME=150,WIN_ROUNDS=5;
 const WL=54,WT=10,WALL_CD=2500;
 const AR_MAG=15,AR_RELOAD=2000,AR_FIRE_RATE=120,AR_MAX_HP=10,AR_BS=9;
 
-/* ══ DIFFICULTY ══ */
+/* ══ DIFFICULTY — bot has same stats as player, only skill changes ══ */
 const DIFS={
-  easy:  {spd:1.6, sTimer:[1400,1800],jitter:0.22,bounceChance:0.12,predict:4, parryReact:0,  mistakeRate:0.30,wTimer:[7000,12000],arFireRate:200,arAcc:0.22},
-  medium:{spd:2.1, sTimer:[700,1100], jitter:0.09,bounceChance:0.28,predict:9, parryReact:0.3,mistakeRate:0.10,wTimer:[4500,7000], arFireRate:140,arAcc:0.12},
-  hard:  {spd:2.7, sTimer:[350,650],  jitter:0.03,bounceChance:0.42,predict:14,parryReact:0.7,mistakeRate:0.05,wTimer:[2500,4500], arFireRate:100,arAcc:0.05},
+  easy:  {spd:PS, sTimer:[1200,1600],jitter:0.28,bounceChance:0.10,predict:3, parryReact:0,   mistakeRate:0.40,wTimer:[7000,12000],arFireRate:AR_FIRE_RATE*1.6,arAcc:0.30},
+  medium:{spd:PS, sTimer:[900,1200], jitter:0.12,bounceChance:0.22,predict:8, parryReact:0.25,mistakeRate:0.14,wTimer:[4500,7000], arFireRate:AR_FIRE_RATE*1.15,arAcc:0.14},
+  hard:  {spd:PS, sTimer:[500,800],  jitter:0.04,bounceChance:0.38,predict:13,parryReact:0.65,mistakeRate:0.04,wTimer:[2500,4500], arFireRate:AR_FIRE_RATE,     arAcc:0.06},
 };
 let difficulty='easy';
 function setDif(d,btn){difficulty=d;document.querySelectorAll('.difbtn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');}
@@ -282,7 +307,7 @@ function selectMode(m){
   gameMode=m;
   ['parry','walls','ar'].forEach(x=>document.getElementById('gm-'+x).className='gm-card');
   document.getElementById('gm-'+m).className='gm-card active-'+m;
-  const labels={parry:'⚡ CLASSIC ▾',walls:'🧱 BUILD ▾',ar:'🔫 AR ▾'};
+  const labels={parry:'◈ CLASSIC ▾',walls:'▣ BUILD ▾',ar:'⌖ AR ▾'};
   const cls={parry:'m-parry',walls:'m-walls',ar:'m-ar'};
   const b=document.getElementById('mode-badge');b.className=cls[m];b.textContent=labels[m];
 }
@@ -343,6 +368,8 @@ function switchModeHUD(){
   document.getElementById('pam').style.display=isAR?'none':'flex';
   document.getElementById('bam').style.display=isAR?'none':'flex';
   document.getElementById('cd-label').textContent=isAR?'AR FIRE CD':'SHOOT CD';
+  document.getElementById('p-hud-hp').style.display=isAR?'block':'none';
+  document.getElementById('b-hud-hp').style.display=isAR?'block':'none';
 }
 function updateParryHUD(now){if(gameMode!=='parry')return;_ph('p',pParry,'#f0d060',now);_ph('b',bParry,'#d85a30',now);}
 function _ph(pr,ps,col,now){const fill=document.getElementById(pr+'-parry-fill'),lbl=document.getElementById(pr+'-parry-lbl');if(ps.state==='ready'){fill.style.width='100%';fill.style.background=col;lbl.textContent='PARRY READY';lbl.style.color=col;}else if(ps.state==='active'){const t=Math.min((now-ps.since)/PARRY_WIN,1);fill.style.width=(100-t*100)+'%';fill.style.background='#fff';lbl.textContent='PARRYING!';lbl.style.color='#fff';}else{const t=Math.min((now-ps.since)/PARRY_CD,1);fill.style.width=(t*100)+'%';fill.style.background='#444';lbl.textContent='CD';lbl.style.color='#555';}}
@@ -356,6 +383,9 @@ function updateARHUD(now){
   const php=player?player.hp/AR_MAX_HP*100:100;
   document.getElementById('p-hp-fill').style.width=php+'%';
   document.getElementById('p-hp-bar-bg').className='hpbar-bg '+(php>60?'hp-p':php>30?'hp-warn':'hp-crit');
+  // Top HUD bar
+  document.getElementById('p-hud-hp-fill').style.width=php+'%';
+  document.getElementById('p-hud-hp-fill').style.background=php>60?'#1d9e75':php>30?'#c8a030':'#d85a30';
   const bp=bReloading?Math.min((now-bReloadStart)/AR_RELOAD,1)*100:100;
   document.getElementById('b-reload-fill').style.width=bp+'%';
   document.getElementById('b-mag-label').textContent=bReloading?'RELOADING...':'x'+bMag;
@@ -363,13 +393,20 @@ function updateARHUD(now){
   const bhp=bot?bot.hp/AR_MAX_HP*100:100;
   document.getElementById('b-hp-fill').style.width=bhp+'%';
   document.getElementById('b-hp-bar-bg').className='hpbar-bg '+(bhp>60?'hp-b':bhp>30?'hp-warn':'hp-crit');
+  // Top HUD bar
+  document.getElementById('b-hud-hp-fill').style.width=bhp+'%';
+  document.getElementById('b-hud-hp-fill').style.background=bhp>60?'#d85a30':bhp>30?'#c8a030':'#e05050';
 }
 
 /* ══ WALLS ══ */
 const W=9; // wall thickness
 
 function buildClassicWalls(){
-  // No walls in classic mode — open arena, parry only
+  // 3 walls: vertical pillar in front of each player + horizontal center bar
+  const cx=AR.x+AR.w/2, cy=AR.y+AR.h/2;
+  walls.push({x:AR.x+70+30,            y:cy-WL/2, w:WT, h:WL, owner:'neutral',fixed:true});
+  walls.push({x:cx-WL/2,               y:cy-WT/2, w:WL, h:WT, owner:'neutral',fixed:true});
+  walls.push({x:AR.x+AR.w-70-30-WT,    y:cy-WL/2, w:WT, h:WL, owner:'neutral',fixed:true});
 }
 
 function buildARWalls(){
@@ -411,9 +448,6 @@ function buildARWalls(){
 
   // ── Diagonal solo pillars flanking center ─────────────────────────
   sym(270, 168, W,  50);  // inner vertical pillar
-
-  // ── Far-side vertical bars (near each player spawn) ───────────────
-  sym(96, 170, W, 70);
 }
 
 function buildStaticWalls(){
@@ -503,8 +537,8 @@ function manualReload(owner){
 /* ══ COUNTDOWN ══ */
 function beginCountdown(){
   const dc=DIFS[difficulty];
-  player={x:AR.x+70,y:AR.y+AR.h/2,vx:0,vy:0,ammo:MAXAMMO,alive:true,hp:AR_MAX_HP};
-  bot   ={x:AR.x+AR.w-70,y:AR.y+AR.h/2,vx:0,vy:0,ammo:MAXAMMO,alive:true,spd:dc.spd,hp:AR_MAX_HP};
+  player={x:AR.x+70,y:AR.y+AR.h/2,vx:0,vy:0,ammo:MAXAMMO,alive:true,hp:AR_MAX_HP,aimAngle:0};
+  bot   ={x:AR.x+AR.w-70,y:AR.y+AR.h/2,vx:0,vy:0,ammo:MAXAMMO,alive:true,spd:dc.spd,hp:AR_MAX_HP,aimAngle:Math.PI};
   bullets=[];particles=[];walls=[];keys={};
   pMag=AR_MAG;bMag=AR_MAG;pReloading=false;bReloading=false;pLastFire=0;bLastFire=0;arAutoFiring=false;
   pWT=-9999;bWT=-9999;
@@ -515,7 +549,10 @@ function beginCountdown(){
   function cdLoop(ts){
     const elapsed=(ts-cdStart)/1000;if(elapsed>=3.7){startRound();return;}
     ctx.fillStyle='#06101a';ctx.fillRect(0,0,CW,CH);
-    drawArena(ts);drawWalls();drawEntities(ts);
+    drawArena(ts);drawWalls();
+    // Update aim during countdown so gun points at mouse
+    if(player)player.aimAngle=Math.atan2(mouse.y-player.y,mouse.x-player.x);
+    drawEntities(ts);
     const phase=elapsed<3?Math.floor(elapsed):3,sub=elapsed-phase;
     const num=phase<3?String(3-phase):'GO!',isGo=phase>=3;
     const enterProg=Math.min(sub*3.5,1),popScale=isGo?1+0.25*(1-Math.min(sub*2.5,1)):2.2-1.2*enterProg;
@@ -612,6 +649,8 @@ function update(dt){
     pushOutOfPads(player);resolveWallCollision(player);
     player.x=clamp(player.x,AR.x+PR,AR.x+AR.w-PR);
     player.y=clamp(player.y,AR.y+PR,AR.y+AR.h-PR);
+    // Track aim angle toward mouse
+    player.aimAngle=Math.atan2(mouse.y-player.y, mouse.x-player.x);
   }
   if(gameMode==='ar'&&arAutoFiring&&player.alive)fireAR(player,mouse.x-player.x,mouse.y-player.y,'player',0.06);
 
@@ -629,6 +668,16 @@ function update(dt){
     bot.x=clamp(bot.x+bot.vx,AR.x+PR,AR.x+AR.w-PR);bot.y=clamp(bot.y+bot.vy,AR.y+PR,AR.y+AR.h-PR);
     pushOutOfPads(bot);resolveWallCollision(bot);
     bot.x=clamp(bot.x,AR.x+PR,AR.x+AR.w-PR);bot.y=clamp(bot.y,AR.y+PR,AR.y+AR.h-PR);
+    // Bot always aims toward player (with slight lag for realism)
+    if(player.alive){
+      const targetAngle=Math.atan2(player.y-bot.y,player.x-bot.x);
+      // Smoothly rotate toward player — hard difficulty snaps faster
+      const lerpSpeed={easy:0.04,medium:0.07,hard:0.14}[difficulty];
+      let da=targetAngle-bot.aimAngle;
+      // Wrap angle
+      while(da>Math.PI)da-=Math.PI*2;while(da<-Math.PI)da+=Math.PI*2;
+      bot.aimAngle+=da*lerpSpeed;
+    }
 
     if(gameMode==='ar'){fireAR(bot,player.x-bot.x,player.y-bot.y,'bot',dc.arAcc);}
     else{
@@ -716,10 +765,29 @@ function drawEntities(ts){
   if(bot?.alive)drawChar(bot,'#d85a30','BOT',ts);
   if(player?.alive)drawChar(player,'#1d9e75','YOU',ts);
   if(player?.alive&&(gstate==='playing'||gstate==='countdown')){
-    const dx=mouse.x-player.x,dy=mouse.y-player.y,len=Math.hypot(dx,dy)||1,ex=player.x+dx/len*56,ey=player.y+dy/len*56;
-    ctx.setLineDash([3,5]);ctx.strokeStyle='rgba(29,158,117,0.38)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(player.x,player.y);ctx.lineTo(ex,ey);ctx.stroke();ctx.setLineDash([]);
-    ctx.beginPath();ctx.arc(ex,ey,2.5,0,Math.PI*2);ctx.fillStyle='rgba(29,158,117,0.65)';ctx.fill();
+    drawCrosshair(mouse.x,mouse.y,'#1d9e75');
   }
+}
+
+function drawCrosshair(cx,cy,col){
+  const gap=6,len=12,thick=1.5;
+  ctx.save();
+  ctx.strokeStyle=col;
+  ctx.lineWidth=thick;
+  ctx.globalAlpha=0.85;
+  // 4 lines with gap
+  ctx.beginPath();ctx.moveTo(cx-gap-len,cy);ctx.lineTo(cx-gap,cy);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(cx+gap,cy);ctx.lineTo(cx+gap+len,cy);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(cx,cy-gap-len);ctx.lineTo(cx,cy-gap);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(cx,cy+gap);ctx.lineTo(cx,cy+gap+len);ctx.stroke();
+  // Outer ring
+  ctx.globalAlpha=0.4;
+  ctx.beginPath();ctx.arc(cx,cy,gap+len+3,0,Math.PI*2);ctx.stroke();
+  // Center dot
+  ctx.globalAlpha=0.9;
+  ctx.fillStyle=col;
+  ctx.beginPath();ctx.arc(cx,cy,1.5,0,Math.PI*2);ctx.fill();
+  ctx.restore();
 }
 
 function drawHUDCanvas(){
@@ -734,26 +802,91 @@ function drawHUDCanvas(){
 }
 function drawHPBar(entity,col){
   if(!entity?.alive)return;
-  const bw=38,bh=5,bx=entity.x-bw/2,by=entity.y-PR-18;
+  const bw=42,bh=5,bx=entity.x-bw/2,by=entity.y-PR-16;
+  // background
+  ctx.fillStyle='rgba(6,14,24,0.8)';ctx.fillRect(bx-1,by-1,bw+2,bh+2);
   ctx.fillStyle='#0c1e2e';ctx.fillRect(bx,by,bw,bh);
-  const hp=Math.max(0,entity.hp)/AR_MAX_HP,hcol=hp>0.5?col:hp>0.25?'#c8a030':'#d85a30';
+  // fill
+  const hp=Math.max(0,entity.hp)/AR_MAX_HP;
+  const hcol=hp>0.5?col:hp>0.25?'#c8a030':'#e05050';
   ctx.fillStyle=hcol;ctx.fillRect(bx,by,bw*hp,bh);
-  ctx.strokeStyle=col;ctx.lineWidth=0.5;ctx.strokeRect(bx,by,bw,bh);
-  ctx.fillStyle=col;ctx.font='bold 8px monospace';ctx.textAlign='center';ctx.textBaseline='bottom';ctx.fillText(entity.hp+'/'+AR_MAX_HP,entity.x,by-1);
+  // border
+  ctx.strokeStyle=hcol;ctx.lineWidth=0.8;ctx.strokeRect(bx,by,bw,bh);
 }
 function drawChar(p,col,name,ts){
   const now=performance.now(),ps=name==='YOU'?pParry:bParry;
   if(gameMode==='parry'&&ps.state==='active'){const t=(now-ps.since)/PARRY_WIN,pulse=0.4+0.6*Math.sin(t*Math.PI*6);ctx.beginPath();ctx.arc(p.x,p.y,PR+8,0,Math.PI*2);ctx.strokeStyle=name==='YOU'?`rgba(240,208,96,${0.7*pulse})`:`rgba(240,144,48,${0.7*pulse})`;ctx.lineWidth=3;ctx.stroke();}
   if(gameMode==='ar'&&p.hp!==undefined&&p.hp<AR_MAX_HP){const f=p.hp/AR_MAX_HP;ctx.beginPath();ctx.arc(p.x,p.y,PR+4,0,Math.PI*2);ctx.fillStyle=`rgba(${col==='#1d9e75'?'29,158,117':'216,90,48'},${0.12+(1-f)*0.28})`;ctx.fill();}
+  // Gun (drawn behind player circle)
+  drawGun(p, col);
+  // Player circle
   ctx.beginPath();ctx.arc(p.x,p.y,PR,0,Math.PI*2);ctx.strokeStyle=col;ctx.lineWidth=2;ctx.stroke();
   ctx.beginPath();ctx.arc(p.x,p.y,PR-3,0,Math.PI*2);ctx.fillStyle=col==='#1d9e75'?'rgba(29,158,117,0.15)':'rgba(216,90,48,0.15)';ctx.fill();
   ctx.beginPath();ctx.arc(p.x,p.y,3.5,0,Math.PI*2);ctx.fillStyle=col;ctx.fill();
   ctx.fillStyle=col;ctx.font='bold 9px monospace';ctx.textAlign='center';ctx.textBaseline='bottom';ctx.fillText(name,p.x,p.y-PR-3);
 }
 
+function drawGun(p, col){
+  const angle = p.aimAngle !== undefined ? p.aimAngle : 0;
+  const isAR  = (gameMode==='ar');
+  // Flip vertically when aiming left so gun doesn't appear upside-down
+  const flip  = (Math.cos(angle) < 0) ? -1 : 1;
+  const r     = col==='#1d9e75' ? '29,158,117' : '216,90,48';
+
+  ctx.save();
+  ctx.translate(p.x, p.y);
+  ctx.rotate(angle);
+  ctx.scale(1, flip);
+  ctx.lineJoin='round'; ctx.lineCap='round';
+
+  if(isAR){
+    // ── AR / Assault Rifle ──
+    // Body receiver
+    ctx.fillStyle=`rgba(${r},0.22)`;ctx.strokeStyle=col;ctx.lineWidth=1.1;
+    ctx.beginPath();ctx.roundRect(PR, -4, 18, 8, 1.5);ctx.fill();ctx.stroke();
+    // Barrel
+    ctx.beginPath();ctx.roundRect(PR+18, -2.5, 16, 5, 1);ctx.fill();ctx.stroke();
+    // Stock
+    ctx.beginPath();ctx.moveTo(PR,-4);ctx.lineTo(PR-4,-4);ctx.lineTo(PR-6,-1);ctx.lineTo(PR-4,4);ctx.lineTo(PR,4);ctx.closePath();ctx.fill();ctx.stroke();
+    // Mag drop
+    ctx.beginPath();ctx.roundRect(PR+6, 4, 5, 7, 1);ctx.fill();ctx.stroke();
+    // Grip
+    ctx.beginPath();ctx.moveTo(PR+1,4);ctx.lineTo(PR-1,9);ctx.lineTo(PR+3,9);ctx.lineTo(PR+4,4);ctx.closePath();ctx.fill();ctx.stroke();
+    // Top rail sight nub
+    ctx.fillStyle=col;ctx.beginPath();ctx.rect(PR+8,-5,2,2);ctx.fill();
+    ctx.beginPath();ctx.rect(PR+20,-5,2,2);ctx.fill();
+    // Muzzle dot
+    ctx.beginPath();ctx.arc(PR+34,0,1.5,0,Math.PI*2);ctx.fillStyle=col;ctx.fill();
+  } else {
+    // ── Sniper Rifle ──
+    // Long barrel
+    ctx.fillStyle=`rgba(${r},0.20)`;ctx.strokeStyle=col;ctx.lineWidth=1.1;
+    ctx.beginPath();ctx.roundRect(PR, -2, 36, 4, 1);ctx.fill();ctx.stroke();
+    // Receiver block
+    ctx.beginPath();ctx.roundRect(PR+1, -4, 16, 8, 1.5);ctx.fill();ctx.stroke();
+    // Stock
+    ctx.beginPath();ctx.moveTo(PR+1,-4);ctx.lineTo(PR-5,-3);ctx.lineTo(PR-7,0);ctx.lineTo(PR-5,3);ctx.lineTo(PR+1,4);ctx.closePath();ctx.fill();ctx.stroke();
+    // Scope body
+    ctx.beginPath();ctx.roundRect(PR+6,-7,10,4,1);ctx.fill();ctx.stroke();
+    // Scope lens ring
+    ctx.strokeStyle=col;ctx.lineWidth=0.8;
+    ctx.beginPath();ctx.arc(PR+15,-5,2,0,Math.PI*2);ctx.stroke();
+    // Scope crosshair lines
+    ctx.beginPath();ctx.moveTo(PR+6,-5);ctx.lineTo(PR+13,-5);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(PR+11,-7);ctx.lineTo(PR+11,-3);ctx.stroke();
+    // Bipod legs hint
+    ctx.beginPath();ctx.moveTo(PR+28,2);ctx.lineTo(PR+26,7);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(PR+30,2);ctx.lineTo(PR+32,7);ctx.stroke();
+    // Muzzle
+    ctx.fillStyle=col;ctx.beginPath();ctx.arc(PR+36,0,1.5,0,Math.PI*2);ctx.fill();
+  }
+
+  ctx.restore();
+}
+
 /* ══ BOOT ══ */
 renderHotkeys();buildRoundPips();
-player={ammo:MAXAMMO,hp:AR_MAX_HP};bot={ammo:MAXAMMO,hp:AR_MAX_HP};updateHUD();player=null;bot=null;
+player={ammo:MAXAMMO,hp:AR_MAX_HP,aimAngle:0};bot={ammo:MAXAMMO,hp:AR_MAX_HP,aimAngle:Math.PI};updateHUD();player=null;bot=null;
 document.getElementById('olm').style.display='none';
 ctx.fillStyle='#06101a';ctx.fillRect(0,0,CW,CH);
 document.getElementById('sbtn').onclick=beginCountdown;
