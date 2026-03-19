@@ -7,7 +7,7 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{width:100%;height:100%;overflow:hidden;background:#010c0e}
-body{display:flex;justify-content:center;align-items:flex-start;padding-top:10px;font-family:'Courier New',monospace}
+body{display:flex;justify-content:center;align-items:flex-start;font-family:'Courier New',monospace}
 #scale-wrap{transform-origin:top center;will-change:transform}
 #aw{width:700px;position:relative}
 
@@ -64,7 +64,7 @@ body{display:flex;justify-content:center;align-items:flex-start;padding-top:10px
 .difbtn.active{border-color:#00ff9a;color:#00ff9a;background:rgba(0,255,154,0.07);box-shadow:0 0 8px rgba(0,255,154,0.15)}
 
 /* Action buttons */
-.hbtn{font-family:inherit;font-size:11px;letter-spacing:2.5px;padding:9px 0;width:220px;
+.hbtn{font-family:inherit;font-size:11px;letter-spacing:2.5px;padding:8px 0;width:160px;
   background:rgba(0,240,200,0.06);border:1px solid #00d8b0;color:#00e8d0;
   cursor:pointer;transition:all .15s;
   clip-path:polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%);
@@ -271,6 +271,12 @@ canvas{display:block;width:100%;cursor:none;border-radius:0 0 8px 8px;border:1px
     <button class="difbtn" onclick="setDif('medium',this)">Medium</button>
     <button class="difbtn" onclick="setDif('hard',this)">Hard</button>
   </div>
+  <div id="maprow" style="display:flex;gap:5px;flex-wrap:wrap;justify-content:center">
+    <button class="difbtn active" id="mb-depot" onclick="setMap('depot',this)">DEPOT</button>
+    <button class="difbtn" id="mb-cross" onclick="setMap('cross',this)">CROSS</button>
+    <button class="difbtn" id="mb-bunker" onclick="setMap('bunker',this)">BUNKER</button>
+    <button class="difbtn" id="mb-open" onclick="setMap('open',this)">OPEN</button>
+  </div>
   <button class="hbtn" id="start-btn" onclick="beginCountdown()">START</button>
   <button class="hbtn" onclick="goTo('skins-page');renderSkins()">SKINS</button>
   <button class="hbtn hbtn-sec" onclick="goTo('settings-page')">SETTINGS</button>
@@ -349,7 +355,7 @@ canvas{display:block;width:100%;cursor:none;border-radius:0 0 8px 8px;border:1px
   <div class="hkrow"><span class="hklabel">Move Right</span><button class="hkbtn" id="hk-right" onclick="listenKey('right',this)"></button></div>
   <div class="hksep"></div>
   <div class="hkrow"><span class="hklabel">Shoot</span><button class="hkbtn" id="hk-shoot" onclick="listenKey('shoot',this)"></button></div>
-  <div class="hkrow"><span class="hklabel">Parry / Wall</span><button class="hkbtn" id="hk-parry" onclick="listenKey('parry',this)"></button></div>
+  <div class="hkrow"><span class="hklabel">Special Keybind</span><button class="hkbtn" id="hk-parry" onclick="listenKey('parry',this)"></button></div>
   <div class="hkrow"><span class="hklabel">Reload (AR)</span><button class="hkbtn" id="hk-reload" onclick="listenKey('reload',this)"></button></div>
   <button class="hbtn" style="margin-top:10px;width:180px" onclick="goTo('home-page')">DONE</button>
   <button class="hbtn hbtn-sec" style="width:180px;margin-top:4px" onclick="resetHotkeys()">RESET DEFAULTS</button>
@@ -448,11 +454,16 @@ canvas{display:block;width:100%;cursor:none;border-radius:0 0 8px 8px;border:1px
 <script>
 /* ══ SCALING ══ */
 function resizeGame(){
-  const wrap=document.getElementById('scale-wrap'),W=700;
+  const wrap=document.getElementById('scale-wrap'),W=1200;
   const activePage=document.querySelector('.page.active');
   const gameH=activePage?activePage.scrollHeight:600;
-  const scale=Math.min(window.innerWidth/(W+20),window.innerHeight/(gameH+20));
-  wrap.style.transform=`scale(${Math.min(scale,1)})`;
+  const scaleX=window.innerWidth/W;
+  const scaleY=window.innerHeight/gameH;
+  const scale=Math.min(scaleX,scaleY);
+  wrap.style.transform=`scale(${scale})`;
+  // Center horizontally when scale < scaleX
+  const scaledW=W*scale;
+  wrap.style.marginLeft=((window.innerWidth-scaledW)/2)+'px';
 }
 window.addEventListener('resize',resizeGame);
 setTimeout(resizeGame,60);
@@ -472,8 +483,19 @@ function goToHome(){
 function openSkins(){goTo('skins-page');renderSkins();}
 
 /* ══ SIGN-IN / REGISTER ══ */
-const ACCOUNTS={'player':'snap123','ace':'ace456','ghost':'ghost789'};
-const ACCOUNT_RES={'player':0,'ace':0,'ghost':0};
+// Load persisted accounts from localStorage
+function loadAccounts(){
+  try{const d=localStorage.getItem('snap_accounts');return d?JSON.parse(d):{'player':'snap123','ace':'ace456','ghost':'ghost789'};}
+  catch(e){return{'player':'snap123','ace':'ace456','ghost':'ghost789'};}
+}
+function saveAccounts(){try{localStorage.setItem('snap_accounts',JSON.stringify(ACCOUNTS));}catch(e){}}
+function loadAccountRes(){
+  try{const d=localStorage.getItem('snap_account_res');return d?JSON.parse(d):{};}catch(e){return{};}
+}
+function saveAccountRes(){try{localStorage.setItem('snap_account_res',JSON.stringify(ACCOUNT_RES));}catch(e){}}
+
+const ACCOUNTS=loadAccounts();
+const ACCOUNT_RES=loadAccountRes();
 let signedInUser=null;
 let resources=0;
 
@@ -490,6 +512,7 @@ function doRegister(){
   if(p.length<4){err.textContent='Password must be 4+ chars';err.style.display='block';return;}
   if(p!==p2){err.textContent='Passwords do not match';err.style.display='block';return;}
   ACCOUNTS[u]=p;ACCOUNT_RES[u]=0;
+  saveAccounts();saveAccountRes();
   closeRegister();
   document.getElementById('si-user').value=u;
   document.getElementById('si-pass').value=p;
@@ -507,6 +530,7 @@ function doSignin(){
     document.getElementById('signin-loggedin').style.display='flex';
     document.getElementById('si-username').textContent='⬡ '+u.toUpperCase();
     document.getElementById('si-res-disp').textContent='◈ '+resources;
+    updateResDisplay();
     err.style.display='none';
   } else {
     err.textContent='Incorrect credentials';err.style.display='block';
@@ -514,7 +538,7 @@ function doSignin(){
   }
 }
 function doSignout(){
-  if(signedInUser)ACCOUNT_RES[signedInUser]=resources;
+  if(signedInUser){ACCOUNT_RES[signedInUser]=resources;saveAccountRes();}
   signedInUser=null;
   document.getElementById('signin-form').style.display='flex';
   document.getElementById('signin-loggedin').style.display='none';
@@ -522,7 +546,7 @@ function doSignout(){
 }
 function addResources(amt){
   resources+=amt;
-  if(signedInUser)ACCOUNT_RES[signedInUser]=resources;
+  if(signedInUser){ACCOUNT_RES[signedInUser]=resources;saveAccountRes();}
   document.getElementById('si-res-disp').textContent='◈ '+resources;
   document.getElementById('res-display').textContent='◈ '+resources;
   const el=document.getElementById('res-display');
@@ -533,11 +557,11 @@ function updateResDisplay(){document.getElementById('res-display').textContent='
 
 /* ══ SKINS ══ */
 const SKIN_DEFS=[
-  {id:'default',name:'DEFAULT',cost:0,   col:'#00ff9a',fill:'rgba(0,255,154,0.18)',desc:'Standard issue'},
-  {id:'ghost',  name:'GHOST',  cost:50,  col:'#aaffee',fill:'rgba(180,255,238,0.14)',desc:'Pale spectral'},
-  {id:'inferno',name:'INFERNO',cost:80,  col:'#ff6600',fill:'rgba(255,102,0,0.18)',desc:'Blazing orange'},
-  {id:'void',   name:'VOID',   cost:120, col:'#aa00ff',fill:'rgba(170,0,255,0.18)',desc:'Deep purple'},
-  {id:'ice',    name:'ICE',    cost:90,  col:'#88ddff',fill:'rgba(136,221,255,0.18)',desc:'Frostbite blue'},
+  {id:'default', name:'CYBER',   cost:0,   col:'#00ff9a', fill:'rgba(0,255,154,0.18)',  bulletCol:'#00ff9a', trailCol:'rgba(0,255,154,0.3)'},
+  {id:'ghost',   name:'PHANTOM', cost:50,  col:'#cc88ff', fill:'rgba(180,100,255,0.14)',bulletCol:'#cc88ff', trailCol:'rgba(180,100,255,0.3)'},
+  {id:'inferno', name:'INFERNO', cost:80,  col:'#ff6600', fill:'rgba(255,102,0,0.18)',  bulletCol:'#ffaa00', trailCol:'rgba(255,140,0,0.4)'},
+  {id:'void',    name:'VOID',    cost:120, col:'#00ccff', fill:'rgba(0,180,255,0.18)',  bulletCol:'#00ccff', trailCol:'rgba(0,180,255,0.3)'},
+  {id:'ice',     name:'STORM',   cost:90,  col:'#ff2255', fill:'rgba(255,34,85,0.18)',  bulletCol:'#ff4488', trailCol:'rgba(255,34,85,0.35)'},
 ];
 let ownedSkins=new Set(['default']);
 let equippedSkin='default';
@@ -588,18 +612,60 @@ function drawSkinPreview(skin,inv){
   const id=(inv?'isc-':'sc-')+skin.id;
   const cnv=document.getElementById(id);if(!cnv)return;
   const c=cnv.getContext('2d');c.clearRect(0,0,80,64);
-  c.fillStyle='rgba(0,15,22,0.85)';c.fillRect(0,0,80,64);
-  c.beginPath();c.arc(30,32,10,0,Math.PI*2);c.strokeStyle=skin.col;c.lineWidth=2;c.stroke();
-  c.beginPath();c.arc(30,32,7,0,Math.PI*2);c.fillStyle=skin.fill;c.fill();
-  c.beginPath();c.arc(30,32,3,0,Math.PI*2);c.fillStyle=skin.col;c.fill();
-  c.save();c.translate(30,32);c.strokeStyle=skin.col;c.lineWidth=1.2;c.lineCap='round';c.lineJoin='round';
-  c.fillStyle=skin.col+'22';
-  c.beginPath();c.roundRect(10,-2,20,4,1);c.fill();c.stroke();
-  c.beginPath();c.roundRect(11,-3.5,9,7,1);c.fill();c.stroke();
-  c.globalAlpha=0.6;c.strokeStyle='#00f8e0';c.lineWidth=0.6;c.beginPath();c.arc(19,-5,1.5,0,Math.PI*2);c.stroke();c.globalAlpha=1;
+  c.fillStyle='rgba(0,10,18,0.95)';c.fillRect(0,0,80,64);
+  const col=skin.col;
+  // Draw player body
+  c.beginPath();c.arc(22,32,9,0,Math.PI*2);c.strokeStyle=col;c.lineWidth=2;c.stroke();
+  c.beginPath();c.arc(22,32,6,0,Math.PI*2);c.fillStyle=skin.fill;c.fill();
+  c.beginPath();c.arc(22,32,3,0,Math.PI*2);c.fillStyle=col;c.fill();
+  // Unique gun shape per skin
+  c.save();c.translate(22,32);
+  if(skin.id==='default'){
+    // Cyber: sleek angular sniper lines
+    c.strokeStyle=col;c.lineWidth=1.5;c.lineCap='round';
+    c.beginPath();c.moveTo(9,0);c.lineTo(38,0);c.stroke();
+    c.beginPath();c.moveTo(10,-3);c.lineTo(22,-3);c.lineTo(22,3);c.lineTo(10,3);c.closePath();c.fillStyle=col+'30';c.fill();c.stroke();
+    c.globalAlpha=0.5;c.strokeStyle='#00f8e0';c.lineWidth=0.7;c.beginPath();c.arc(16,-5,2,0,Math.PI*2);c.stroke();c.globalAlpha=1;
+  } else if(skin.id==='ghost'){
+    // Phantom: translucent dual-tone with glow
+    c.strokeStyle=col;c.lineWidth=1.4;
+    c.globalAlpha=0.6;c.strokeStyle='#ffffff';c.beginPath();c.moveTo(9,-1);c.lineTo(36,-1);c.stroke();
+    c.globalAlpha=1;c.strokeStyle=col;c.beginPath();c.moveTo(9,1.5);c.lineTo(36,1.5);c.stroke();
+    c.fillStyle=col+'40';c.beginPath();c.roundRect(10,-4,14,8,2);c.fill();c.strokeStyle=col;c.lineWidth=1;c.stroke();
+    c.globalAlpha=0.4;c.strokeStyle='#ffffff';c.lineWidth=0.6;c.beginPath();c.arc(38,-4,3,0,Math.PI*2);c.stroke();c.globalAlpha=1;
+  } else if(skin.id==='inferno'){
+    // Inferno: AK-style wood+metal — chunky barrel, curved mag
+    c.strokeStyle='#8B4513';c.lineWidth=1.2;c.fillStyle='rgba(139,69,19,0.5)';
+    c.beginPath();c.roundRect(9,-3,15,6,1.5);c.fill();c.stroke();
+    c.strokeStyle='#555';c.fillStyle='rgba(60,60,60,0.7)';
+    c.beginPath();c.roundRect(24,-2.5,14,5,1);c.fill();c.stroke();
+    c.strokeStyle='#444';c.fillStyle='rgba(50,50,50,0.85)';
+    c.beginPath();c.moveTo(13,3);c.lineTo(11,11);c.lineTo(16,11);c.lineTo(18,3);c.closePath();c.fill();c.stroke();
+    c.strokeStyle=col;c.lineWidth=1;c.beginPath();c.moveTo(9,-2);c.lineTo(9,2);c.stroke();
+  } else if(skin.id==='void'){
+    // Void: futuristic energy pistol — compact glowing barrel
+    const vg=c.createLinearGradient(9,0,36,0);vg.addColorStop(0,'#003366');vg.addColorStop(1,col+'88');
+    c.fillStyle=vg;c.strokeStyle=col;c.lineWidth=1.3;
+    c.beginPath();c.roundRect(9,-4,26,8,3);c.fill();c.stroke();
+    c.globalAlpha=0.7;c.fillStyle=col;c.beginPath();c.roundRect(28,-2,8,4,1);c.fill();c.globalAlpha=1;
+    c.globalAlpha=0.5;c.strokeStyle='#ffffff';c.lineWidth=0.6;
+    for(let i=0;i<3;i++){c.beginPath();c.moveTo(13+i*5,-3.5);c.lineTo(13+i*5,3.5);c.stroke();}
+    c.globalAlpha=1;
+    c.fillStyle=col;c.beginPath();c.arc(36,0,2.5,0,Math.PI*2);c.fill();
+  } else {
+    // Storm: aggressive red — wide receiver + front grip
+    c.fillStyle='rgba(180,0,40,0.4)';c.strokeStyle=col;c.lineWidth=1.3;
+    c.beginPath();c.roundRect(9,-5,22,10,1.5);c.fill();c.stroke();
+    c.fillStyle='rgba(255,0,60,0.3)';
+    c.beginPath();c.roundRect(31,-2,7,4,1);c.fill();c.stroke();
+    c.strokeStyle='rgba(255,100,120,0.8)';c.lineWidth=0.8;
+    c.beginPath();c.moveTo(12,-6);c.lineTo(12,5);c.stroke();
+    c.beginPath();c.moveTo(20,-6);c.lineTo(20,5);c.stroke();
+    c.fillStyle=col+'60';c.beginPath();c.roundRect(14,3,9,8,1);c.fill();c.strokeStyle=col;c.lineWidth=1;c.stroke();
+  }
   c.restore();
-  c.fillStyle=skin.col;c.font='bold 7px monospace';c.textAlign='left';c.textBaseline='top';
-  c.fillText(skin.name,2,2);
+  // Skin name label
+  c.fillStyle=col;c.font='bold 7px monospace';c.textAlign='left';c.textBaseline='top';c.fillText(skin.name,2,2);
 }
 
 function buySkin(id){
@@ -613,6 +679,7 @@ function buySkin(id){
 function equipSkin(id){equippedSkin=id;renderSkins();}
 
 /* ══ CANVAS ══ */
+// mistake in code: not displaying the top outline when in match
 const canvas=document.getElementById('gc'),ctx=canvas.getContext('2d');
 const CW=680,CH=490,MG=32;
 const ARENA={x:MG,y:MG,w:CW-MG*2,h:CH-MG*2};
@@ -620,12 +687,12 @@ const PAD_R=44;
 const PADS=[{x:ARENA.x+PAD_R,y:ARENA.y+PAD_R},{x:ARENA.x+ARENA.w-PAD_R,y:ARENA.y+PAD_R},{x:ARENA.x+PAD_R,y:ARENA.y+ARENA.h-PAD_R},{x:ARENA.x+ARENA.w-PAD_R,y:ARENA.y+ARENA.h-PAD_R}];
 
 /* ══ CONSTANTS ══ */
-const PR=12,BR=4,BS=8,PS=2.25,SPEED_MULT=2.5;
-const MAXAMMO=20,SHOOT_CD=1000;
-const PARRY_WIN=150,PARRY_CD=1200,PARRY_DIST=40;
-const MATCH_TIME=150,WIN_ROUNDS=5;
-const WL=54,WT=10,WALL_CD=2500;
-const AR_MAG=15,AR_RELOAD=2000,AR_FIRE_RATE=120,AR_MAX_HP=10,AR_BS=9;
+const PR=12,BR=4,BS=8,PS=2.25,SPEED_MULT=2.5; // 
+const MAXAMMO=20,SHOOT_CD=800; // maxmimum ammo for classic. cool down for sniper
+const PARRY_WIN=150,PARRY_CD=1750,PARRY_DIST=40; // 0.15 parry time. parry cooldown 1.75 sec. 40 for parry distiance
+const MATCH_TIME=150,WIN_ROUNDS=5; // 2.5 minute for match. rounds for win: 5
+const WL=54,WT=10,WALL_CD=2500; // 
+const AR_MAG=15,AR_RELOAD=2000,AR_FIRE_RATE=125,AR_MAX_HP=10,AR_BS=9;
 
 /* ══ DIFFICULTY ══ */
 const DIFS={
@@ -785,25 +852,91 @@ function updateARHUD(now){
   document.getElementById('b-hud-hp-fill').style.background=bhp>60?B_COL:bhp>30?'#f0b020':'#ff4400';
 }
 
-/* ══ WALLS ══ */
-const W=9;
-function buildClassicWalls(){
+/* ══ MAP SYSTEM ══ */
+let currentMap='depot';
+function setMap(m,btn){
+  currentMap=m;
+  document.querySelectorAll('#maprow .difbtn').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+}
+
+// Helper: push a wall defined relative to arena center (symmetric)
+function wallC(cx,cy,ox,oy,ww,wh,tag){
+  walls.push({x:cx+ox-ww/2,y:cy+oy-wh/2,w:ww,h:wh,owner:'neutral',fixed:true,...(tag?{arWall:true}:{})});
+}
+// Mirror a wall horizontally around arena center
+function wallSym(cx,cy,ox,oy,ww,wh,tag){
+  wallC(cx,cy,ox,oy,ww,wh,tag);
+  wallC(cx,cy,-ox,oy,ww,wh,tag);
+}
+// Mirror a wall in all 4 quadrants
+function wallQuad(cx,cy,ox,oy,ww,wh,tag){
+  wallC(cx,cy, ox, oy,ww,wh,tag);wallC(cx,cy,-ox, oy,ww,wh,tag);
+  wallC(cx,cy, ox,-oy,ww,wh,tag);wallC(cx,cy,-ox,-oy,ww,wh,tag);
+}
+
+function buildMap_depot(){
+  // Symmetric: centre cross + 4 side bunkers + corner pillars
   const cx=ARENA.x+ARENA.w/2,cy=ARENA.y+ARENA.h/2;
-  walls.push({x:ARENA.x+100,y:cy-WL/2,w:WT,h:WL,owner:'neutral',fixed:true});
-  walls.push({x:cx-WL/2,y:cy-WT/2,w:WL,h:WT,owner:'neutral',fixed:true});
-  walls.push({x:ARENA.x+ARENA.w-100-WT,y:cy-WL/2,w:WT,h:WL,owner:'neutral',fixed:true});
+  // Centre cross
+  walls.push({x:cx-40,y:cy-5,w:80,h:10,owner:'neutral',fixed:true});
+  walls.push({x:cx-5,y:cy-40,w:10,h:80,owner:'neutral',fixed:true});
+  // Side bunkers (left/right, symmetric)
+  wallSym(cx,cy,120,0,10,60);
+  // Top/bottom symmetric walls
+  walls.push({x:cx-30,y:cy-90,w:60,h:10,owner:'neutral',fixed:true});
+  walls.push({x:cx-30,y:cy+80,w:60,h:10,owner:'neutral',fixed:true});
+  // Corner pillars (4-way symmetric)
+  wallQuad(cx,cy,150,80,10,10);
 }
-function buildARWalls(){
-  const cx=340,cy=245;
-  function sym(wx,wy,ww,wh){const opt={owner:'neutral',arWall:true,fixed:true};const mx=2*cx-(wx+ww),my=2*cy-(wy+wh);walls.push({x:wx,y:wy,w:ww,h:wh,...opt});walls.push({x:mx,y:wy,w:ww,h:wh,...opt});walls.push({x:wx,y:my,w:ww,h:wh,...opt});walls.push({x:mx,y:my,w:ww,h:wh,...opt});}
-  walls.push({x:cx-50,y:cy-5,w:100,h:10,owner:'neutral',arWall:true,fixed:true});
-  walls.push({x:cx-5,y:cy-50,w:10,h:100,owner:'neutral',arWall:true,fixed:true});
-  sym(178,148,62,W);sym(178,148,W,52);sym(110,210,80,W);sym(270,168,W,50);
+
+function buildMap_cross(){
+  // Big open cross lanes with angled cover blocks in all 4 quadrants
+  const cx=ARENA.x+ARENA.w/2,cy=ARENA.y+ARENA.h/2;
+  // Thick centre cross
+  walls.push({x:cx-55,y:cy-6,w:110,h:12,owner:'neutral',fixed:true});
+  walls.push({x:cx-6,y:cy-55,w:12,h:110,owner:'neutral',fixed:true});
+  // Quad cover blocks — 45-unit offset from centre
+  wallQuad(cx,cy,110,70,14,40);
+  wallQuad(cx,cy,70,110,40,14);
+  // Inner lane stoppers
+  wallQuad(cx,cy,52,52,12,12);
 }
+
+function buildMap_bunker(){
+  // Two enclosed rooms left/right with doorway gaps + central corridor walls
+  const cx=ARENA.x+ARENA.w/2,cy=ARENA.y+ARENA.h/2;
+  const W2=ARENA.w/2,H2=ARENA.h/2;
+  // Left room walls (mirrored right)
+  const roomW=110,roomH=150,doorH=36;
+  // Top & bottom of left room
+  wallSym(cx,cy,-W2/2+10,-H2/2+5,roomW,10);
+  wallSym(cx,cy,-W2/2+10, H2/2-5,roomW,10);
+  // Left outer wall
+  walls.push({x:ARENA.x+8,y:cy-roomH/2,w:10,h:(roomH-doorH)/2,owner:'neutral',fixed:true});
+  walls.push({x:ARENA.x+8,y:cy+doorH/2,w:10,h:(roomH-doorH)/2,owner:'neutral',fixed:true});
+  walls.push({x:ARENA.x+ARENA.w-18,y:cy-roomH/2,w:10,h:(roomH-doorH)/2,owner:'neutral',fixed:true});
+  walls.push({x:ARENA.x+ARENA.w-18,y:cy+doorH/2,w:10,h:(roomH-doorH)/2,owner:'neutral',fixed:true});
+  // Centre divider with gap
+  walls.push({x:cx-5,y:ARENA.y+8,w:10,h:H2-35,owner:'neutral',fixed:true});
+  walls.push({x:cx-5,y:cy+35,w:10,h:H2-35,owner:'neutral',fixed:true});
+  // Inner cover blocks (symmetric)
+  wallSym(cx,cy,-90,0,10,50);
+  wallSym(cx,cy,-90,85,50,10);
+  wallSym(cx,cy,-90,-85,50,10);
+}
+
+function buildMap_open(){
+  // Minimal: just 4 small pillars and a tiny centre block — speed-friendly
+  const cx=ARENA.x+ARENA.w/2,cy=ARENA.y+ARENA.h/2;
+  walls.push({x:cx-10,y:cy-10,w:20,h:20,owner:'neutral',fixed:true});
+  wallQuad(cx,cy,130,90,14,14);
+}
+
 function buildStaticWalls(){
   walls=[];
-  if(gameMode==='parry')buildClassicWalls();
-  else if(gameMode==='ar')buildARWalls();
+  const builders={depot:buildMap_depot,cross:buildMap_cross,bunker:buildMap_bunker,open:buildMap_open};
+  (builders[currentMap]||buildMap_depot)();
 }
 function getWallPreview(shooter){
   const dx=mouse.x-shooter.x,dy=mouse.y-shooter.y,len=Math.hypot(dx,dy)||1,ax=dx/len,ay=dy/len;
@@ -1115,44 +1248,40 @@ function drawParticles(){
 }
 
 function drawBullets(){
+  const sk=getSkin();
+  const pBulletCol=sk.bulletCol||P_COL;
+  const pTrailCol=sk.trailCol||'rgba(0,255,154,0.25)';
   for(const b of bullets){
     if(b.trail.length<2)continue;
     const isPlayer=b.owner==='player';
     if(!b.isAR && isPlayer){
-      // Sniper trail — glowing yellow-green like the barrel
       ctx.save();
-      // Outer glow layer
       ctx.beginPath();ctx.moveTo(b.trail[0].x,b.trail[0].y);
       for(let i=1;i<b.trail.length;i++)ctx.lineTo(b.trail[i].x,b.trail[i].y);
-      ctx.strokeStyle='rgba(210,230,80,0.12)';ctx.lineWidth=8;ctx.lineCap='round';ctx.stroke();
-      // Mid glow
+      ctx.strokeStyle=pTrailCol.replace('0.3','0.1').replace('0.35','0.1').replace('0.4','0.1');ctx.lineWidth=9;ctx.lineCap='round';ctx.stroke();
       ctx.beginPath();ctx.moveTo(b.trail[0].x,b.trail[0].y);
       for(let i=1;i<b.trail.length;i++)ctx.lineTo(b.trail[i].x,b.trail[i].y);
-      ctx.strokeStyle='rgba(200,220,100,0.3)';ctx.lineWidth=4;ctx.stroke();
-      // Core bright line
+      ctx.strokeStyle=pTrailCol;ctx.lineWidth=4;ctx.stroke();
       ctx.beginPath();ctx.moveTo(b.trail[0].x,b.trail[0].y);
       for(let i=1;i<b.trail.length;i++)ctx.lineTo(b.trail[i].x,b.trail[i].y);
-      ctx.strokeStyle='rgba(230,245,150,0.85)';ctx.lineWidth=1.5;ctx.stroke();
+      ctx.strokeStyle='rgba(240,255,200,0.85)';ctx.lineWidth=1.5;ctx.stroke();
       ctx.restore();
     } else {
       ctx.beginPath();ctx.moveTo(b.trail[0].x,b.trail[0].y);
       for(let i=1;i<b.trail.length;i++)ctx.lineTo(b.trail[i].x,b.trail[i].y);
-      ctx.strokeStyle=isPlayer?'rgba(0,255,154,0.25)':'rgba(0,240,255,0.25)';
+      ctx.strokeStyle=isPlayer?pTrailCol:'rgba(0,240,255,0.25)';
       ctx.lineWidth=b.isAR?1:1.5;ctx.stroke();
     }
   }
   for(const b of bullets){
     const isPlayer=b.owner==='player';
     if(!b.isAR && isPlayer){
-      // Sniper bullet — bright glowing dot with outer ring
-      ctx.save();
-      ctx.shadowColor='rgba(220,240,80,0.9)';ctx.shadowBlur=10;
-      ctx.beginPath();ctx.arc(b.x,b.y,BR,0,Math.PI*2);
-      ctx.fillStyle='rgba(230,245,160,0.95)';ctx.fill();
+      ctx.save();ctx.shadowColor=pBulletCol;ctx.shadowBlur=10;
+      ctx.beginPath();ctx.arc(b.x,b.y,BR,0,Math.PI*2);ctx.fillStyle=pBulletCol;ctx.fill();
       ctx.shadowBlur=0;ctx.restore();
     } else {
       ctx.beginPath();ctx.arc(b.x,b.y,b.isAR?2.5:BR,0,Math.PI*2);
-      ctx.fillStyle=isPlayer?P_COL:B_COL;ctx.fill();
+      ctx.fillStyle=isPlayer?pBulletCol:B_COL;ctx.fill();
     }
   }
 }
@@ -1161,13 +1290,13 @@ function drawEntities(ts){
   if(bot?.alive)drawChar(bot,B_COL,'BOT',ts);
   if(player?.alive){
     const sk=getSkin();
-    drawChar(player,sk.col,'YOU',ts,sk);
+    drawChar(player,sk.col,'YOU',ts,sk); // should be the username of player
   }
   if(player?.alive&&(gstate==='playing'||gstate==='countdown'))drawCrosshair(mouse.x,mouse.y,P_COL);
 }
 
 function drawCrosshair(cx,cy,col){
-  const gap=7,len=14,dotLen=22,dotSpacing=4;
+  const gap=2,len=5,dotLen=22,dotSpacing=4; // the center
   ctx.save();
   ctx.strokeStyle=col;ctx.lineWidth=1.5;ctx.globalAlpha=0.9;
   ctx.beginPath();ctx.moveTo(cx-gap-len,cy);ctx.lineTo(cx-gap,cy);ctx.stroke();
@@ -1175,23 +1304,23 @@ function drawCrosshair(cx,cy,col){
   ctx.beginPath();ctx.moveTo(cx,cy-gap-len);ctx.lineTo(cx,cy-gap);ctx.stroke();
   ctx.beginPath();ctx.moveTo(cx,cy+gap);ctx.lineTo(cx,cy+gap+len);ctx.stroke();
   ctx.strokeStyle=col;ctx.lineWidth=1;ctx.globalAlpha=0.45;
-  ctx.setLineDash([2,dotSpacing]);
-  ctx.beginPath();ctx.moveTo(cx-gap-len-dotLen,cy);ctx.lineTo(cx-gap-len,cy);ctx.stroke();
-  ctx.beginPath();ctx.moveTo(cx+gap+len,cy);ctx.lineTo(cx+gap+len+dotLen,cy);ctx.stroke();
-  ctx.beginPath();ctx.moveTo(cx,cy-gap-len-dotLen);ctx.lineTo(cx,cy-gap-len);ctx.stroke();
-  ctx.beginPath();ctx.moveTo(cx,cy+gap+len);ctx.lineTo(cx,cy+gap+len+dotLen);ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.strokeStyle=col;ctx.lineWidth=1;ctx.globalAlpha=0.5;
+  //ctx.setLineDash([2,dotSpacing]);
+  //ctx.beginPath();ctx.moveTo(cx-gap-len-dotLen,cy);ctx.lineTo(cx-gap-len,cy);ctx.stroke();
+  //ctx.beginPath();ctx.moveTo(cx+gap+len,cy);ctx.lineTo(cx+gap+len+dotLen,cy);ctx.stroke();
+  //ctx.beginPath();ctx.moveTo(cx,cy-gap-len-dotLen);ctx.lineTo(cx,cy-gap-len);ctx.stroke();
+  //ctx.beginPath();ctx.moveTo(cx,cy+gap+len);ctx.lineTo(cx,cy+gap+len+dotLen);ctx.stroke();
+  //ctx.setLineDash([]);
+  //ctx.strokeStyle=col;ctx.lineWidth=1;ctx.globalAlpha=0.5;
   const br=gap+len+2,bl=5;
   ctx.beginPath();ctx.moveTo(cx-br,cy-br+bl);ctx.lineTo(cx-br,cy-br);ctx.lineTo(cx-br+bl,cy-br);ctx.stroke();
   ctx.beginPath();ctx.moveTo(cx+br-bl,cy-br);ctx.lineTo(cx+br,cy-br);ctx.lineTo(cx+br,cy-br+bl);ctx.stroke();
   ctx.beginPath();ctx.moveTo(cx-br,cy+br-bl);ctx.lineTo(cx-br,cy+br);ctx.lineTo(cx-br+bl,cy+br);ctx.stroke();
   ctx.beginPath();ctx.moveTo(cx+br-bl,cy+br);ctx.lineTo(cx+br,cy+br);ctx.lineTo(cx+br,cy+br-bl);ctx.stroke();
-  ctx.globalAlpha=0.2;ctx.beginPath();ctx.arc(cx,cy,gap+len+dotLen+4,0,Math.PI*2);ctx.lineWidth=0.8;ctx.stroke();
+  //ctx.globalAlpha=0.2;ctx.beginPath();ctx.arc(cx,cy,gap+len+dotLen+4,0,Math.PI*2);ctx.lineWidth=0.8;ctx.stroke();
   ctx.globalAlpha=1;ctx.fillStyle=col;
   ctx.shadowColor=col;ctx.shadowBlur=6;
-  ctx.beginPath();ctx.arc(cx,cy,1.8,0,Math.PI*2);ctx.fill();
-  ctx.shadowBlur=0;
+  //ctx.beginPath();ctx.arc(cx,cy,1.8,0,Math.PI*2);ctx.fill();
+  //ctx.shadowBlur=0;
   ctx.restore();
 }
 
@@ -1236,80 +1365,131 @@ function drawChar(p,col,name,ts,skin){
   ctx.fillStyle=col;ctx.font='bold 9px monospace';ctx.textAlign='center';ctx.textBaseline='bottom';ctx.fillText(name,p.x,p.y-PR-3);
 }
 
-function drawGun(p,col,isBot){
+function drawGun(p,col,isBot,skinId){
   const angle=p.aimAngle!==undefined?p.aimAngle:0;
   const isAR=(gameMode==='ar');
   const flip=(Math.cos(angle)<0)?-1:1;
-  const sc=isBot?0.52:0.72;
+  const sc=isBot?0.50:0.70;
   ctx.save();ctx.translate(p.x,p.y);ctx.rotate(angle);ctx.scale(sc,flip*sc);
   ctx.lineJoin='round';ctx.lineCap='round';
-  ctx.globalAlpha=0.95;
+  const O=PR;
 
   if(isAR){
-    // AR gun unchanged
-    ctx.fillStyle=col+'28';ctx.strokeStyle=col;ctx.lineWidth=1.2;
-    ctx.beginPath();ctx.roundRect(PR,-4,18,8,1.5);ctx.fill();ctx.stroke();
-    ctx.beginPath();ctx.roundRect(PR+18,-2.5,16,5,1);ctx.fill();ctx.stroke();
-    ctx.beginPath();ctx.moveTo(PR,-4);ctx.lineTo(PR-4,-4);ctx.lineTo(PR-6,-1);ctx.lineTo(PR-4,4);ctx.lineTo(PR,4);ctx.closePath();ctx.fill();ctx.stroke();
-    ctx.beginPath();ctx.roundRect(PR+6,4,5,7,1);ctx.fill();ctx.stroke();
-    ctx.beginPath();ctx.moveTo(PR+1,4);ctx.lineTo(PR-1,9);ctx.lineTo(PR+3,9);ctx.lineTo(PR+4,4);ctx.closePath();ctx.fill();ctx.stroke();
-    ctx.strokeStyle=col;ctx.lineWidth=0.9;ctx.beginPath();ctx.roundRect(PR+10,-6,8,5,0.5);ctx.stroke();
-    ctx.globalAlpha=0.65;ctx.strokeStyle='#00f8e0';ctx.lineWidth=0.7;
-    ctx.beginPath();ctx.moveTo(PR+14,-5);ctx.lineTo(PR+12,-2);ctx.lineTo(PR+16,-2);ctx.closePath();ctx.stroke();
-    ctx.globalAlpha=1;
+    // AK-style futuristic AR: wood-toned handguard, dark receiver, curved mag, long barrel
+    ctx.globalAlpha=0.95;
+    // Long barrel
+    const barrelGrad=ctx.createLinearGradient(O+32,0,O+58,0);
+    barrelGrad.addColorStop(0,'#2a3040');barrelGrad.addColorStop(1,'#4a5060');
+    ctx.fillStyle=barrelGrad;ctx.strokeStyle='#606878';ctx.lineWidth=1;
+    ctx.beginPath();ctx.roundRect(O+32,-2,26,4,1);ctx.fill();ctx.stroke();
+    // Front sight
+    ctx.strokeStyle='#888';ctx.lineWidth=0.8;
+    ctx.beginPath();ctx.moveTo(O+54,-2);ctx.lineTo(O+54,-6);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(O+52,-6);ctx.lineTo(O+56,-6);ctx.stroke();
+    // Gas tube above barrel
+    ctx.fillStyle='#1e2530';ctx.strokeStyle='#353e50';ctx.lineWidth=0.8;
+    ctx.beginPath();ctx.roundRect(O+16,-5,20,3,1);ctx.fill();ctx.stroke();
+    // Wood handguard (warm brown)
+    const woodGrad=ctx.createLinearGradient(O+16,0,O+32,0);
+    woodGrad.addColorStop(0,'#6b3a1f');woodGrad.addColorStop(0.5,'#8b4a22');woodGrad.addColorStop(1,'#5a3018');
+    ctx.fillStyle=woodGrad;ctx.strokeStyle='#7a4020';ctx.lineWidth=1;
+    ctx.beginPath();ctx.roundRect(O+16,-3.5,16,7,1.5);ctx.fill();ctx.stroke();
+    // Wood grain lines
+    ctx.strokeStyle='rgba(40,20,10,0.4)';ctx.lineWidth=0.5;
+    for(let i=0;i<3;i++){ctx.beginPath();ctx.moveTo(O+18+i*5,-3);ctx.lineTo(O+19+i*5,3);ctx.stroke();}
+    // Receiver body (dark, engraved look)
+    const recvGrad=ctx.createLinearGradient(O,-5,O,5);
+    recvGrad.addColorStop(0,'#2a3040');recvGrad.addColorStop(0.5,'#353d50');recvGrad.addColorStop(1,'#202838');
+    ctx.fillStyle=recvGrad;ctx.strokeStyle='#4a5260';ctx.lineWidth=1.2;
+    ctx.beginPath();ctx.roundRect(O,-5,20,10,2);ctx.fill();ctx.stroke();
+    // Engraving detail lines on receiver
+    ctx.strokeStyle='rgba(100,130,180,0.35)';ctx.lineWidth=0.5;
+    ctx.beginPath();ctx.moveTo(O+2,-3);ctx.lineTo(O+18,-3);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(O+2,3);ctx.lineTo(O+18,3);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(O+8,-4);ctx.lineTo(O+8,4);ctx.stroke();
+    // Ejection port
+    ctx.fillStyle='rgba(0,0,0,0.6)';ctx.strokeStyle='#303848';ctx.lineWidth=0.6;
+    ctx.beginPath();ctx.roundRect(O+10,-4,6,3,0.5);ctx.fill();ctx.stroke();
+    // Wood stock (back)
+    const stockGrad=ctx.createLinearGradient(O-14,0,O,0);
+    stockGrad.addColorStop(0,'#5a2e0e');stockGrad.addColorStop(1,'#8b4a22');
+    ctx.fillStyle=stockGrad;ctx.strokeStyle='#6a3a18';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(O,-4);ctx.lineTo(O-12,-3);ctx.lineTo(O-14,0);ctx.lineTo(O-12,4);ctx.lineTo(O,4);ctx.closePath();ctx.fill();ctx.stroke();
+    // Stock wood grain
+    ctx.strokeStyle='rgba(30,12,4,0.35)';ctx.lineWidth=0.5;
+    ctx.beginPath();ctx.moveTo(O-10,-2);ctx.lineTo(O-11,2);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(O-6,-3);ctx.lineTo(O-7,3);ctx.stroke();
+    // Curved magazine (AK signature)
+    ctx.fillStyle='#252d3c';ctx.strokeStyle='#353d4e';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(O+4,4);ctx.bezierCurveTo(O+3,12,O+7,18,O+10,18);ctx.lineTo(O+14,18);ctx.bezierCurveTo(O+17,18,O+20,12,O+19,4);ctx.closePath();ctx.fill();ctx.stroke();
+    // Mag engraving
+    ctx.strokeStyle='rgba(80,100,140,0.3)';ctx.lineWidth=0.5;
+    for(let i=0;i<3;i++){ctx.beginPath();ctx.moveTo(O+6+i*4,6);ctx.lineTo(O+5+i*4,15);ctx.stroke();}
+    // Trigger
+    ctx.strokeStyle='#8a9ab0';ctx.lineWidth=0.9;
+    ctx.beginPath();ctx.moveTo(O+16,4);ctx.lineTo(O+14,10);ctx.stroke();
+    // Grip (dark, textured)
+    ctx.fillStyle='#1a2030';ctx.strokeStyle='#2a3040';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(O+16,4);ctx.lineTo(O+14,14);ctx.lineTo(O+20,14);ctx.lineTo(O+21,4);ctx.closePath();ctx.fill();ctx.stroke();
+    // Scope / sight rail on top
+    ctx.fillStyle='#1a2230';ctx.strokeStyle='#2a3a50';ctx.lineWidth=0.8;
+    ctx.beginPath();ctx.roundRect(O+2,-8,14,3,1);ctx.fill();ctx.stroke();
+    // Futuristic holographic sight
+    ctx.fillStyle='rgba(0,180,255,0.15)';ctx.strokeStyle=col;ctx.lineWidth=0.8;
+    ctx.beginPath();ctx.roundRect(O+3,-7,6,8,1);ctx.fill();ctx.stroke();
+    ctx.globalAlpha=0.6;ctx.strokeStyle='#00f0ff';ctx.lineWidth=0.5;
+    ctx.beginPath();ctx.moveTo(O+4,-4);ctx.lineTo(O+8,-4);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(O+6,-6);ctx.lineTo(O+6,-2);ctx.stroke();
+    ctx.globalAlpha=0.95;
   } else {
-    // SNIPER — matches the image: dark chunky body, red magazine, long pale slim barrel, bronze bullet tip
-    const O=PR; // origin offset from player center
-
-    // Long pale barrel (the dominant feature — extends far right)
-    const barrelStart=O+8,barrelEnd=O+62;
-    // Barrel gradient: pale yellow-green fading to lighter near tip
+    // SNIPER — detailed futuristic: dark body, red accent, long glowing barrel, bronze tip, scope
+    // Long pale barrel
+    const barrelStart=O+8,barrelEnd=O+64;
     const bGrad=ctx.createLinearGradient(barrelStart,0,barrelEnd,0);
-    bGrad.addColorStop(0,'rgba(180,190,140,0.5)');
-    bGrad.addColorStop(0.5,'rgba(210,220,170,0.85)');
-    bGrad.addColorStop(1,'rgba(220,215,160,0.7)');
-    ctx.fillStyle=bGrad;ctx.strokeStyle='rgba(160,170,120,0.9)';ctx.lineWidth=0.8;
+    bGrad.addColorStop(0,'rgba(160,175,120,0.55)');bGrad.addColorStop(0.45,'rgba(215,225,165,0.9)');bGrad.addColorStop(1,'rgba(200,210,150,0.65)');
+    ctx.fillStyle=bGrad;ctx.strokeStyle='rgba(140,155,100,0.85)';ctx.lineWidth=0.9;
     ctx.beginPath();ctx.roundRect(barrelStart,-1.5,barrelEnd-barrelStart,3,1);ctx.fill();ctx.stroke();
-
-    // Dark connector knob between body and barrel
+    // Suppressor rings near tip
+    ctx.strokeStyle='rgba(120,130,90,0.7)';ctx.lineWidth=0.7;
+    for(let i=0;i<4;i++){ctx.beginPath();ctx.moveTo(barrelEnd-12+i*3,-2);ctx.lineTo(barrelEnd-12+i*3,2);ctx.stroke();}
+    // Dark connector knob
     ctx.fillStyle='#1a2230';ctx.strokeStyle='#0a1520';ctx.lineWidth=1;
-    ctx.beginPath();ctx.roundRect(O+7,-3,5,6,1);ctx.fill();ctx.stroke();
-
-    // Main body — dark blue-black, chunky
-    ctx.fillStyle='#1c2840';ctx.strokeStyle='#2a3a50';ctx.lineWidth=1.2;
+    ctx.beginPath();ctx.roundRect(O+6,-3.5,5,7,1);ctx.fill();ctx.stroke();
+    // Main body — dark blue-black with surface detail
+    const bodyGrad=ctx.createLinearGradient(O-2,-5,O-2,5);
+    bodyGrad.addColorStop(0,'#1c2840');bodyGrad.addColorStop(0.5,'#253050');bodyGrad.addColorStop(1,'#151e30');
+    ctx.fillStyle=bodyGrad;ctx.strokeStyle='#2e3e58';ctx.lineWidth=1.3;
     ctx.beginPath();ctx.roundRect(O-2,-5,18,10,2);ctx.fill();ctx.stroke();
-
-    // Red magazine/accent block — prominent like in image
-    ctx.fillStyle='#cc2200';ctx.strokeStyle='#ff3300';ctx.lineWidth=1;
-    ctx.beginPath();ctx.roundRect(O+2,3,7,8,1);ctx.fill();ctx.stroke();
-    // Red highlight stripe
-    ctx.fillStyle='rgba(255,80,40,0.5)';
-    ctx.beginPath();ctx.roundRect(O+3,4,5,2,0.5);ctx.fill();
-
-    // Blue scope block on top
-    ctx.fillStyle='#223355';ctx.strokeStyle='#3355aa';ctx.lineWidth=0.9;
-    ctx.beginPath();ctx.roundRect(O+1,-9,12,5,1.5);ctx.fill();ctx.stroke();
-    // Scope lens glint
-    ctx.fillStyle='rgba(100,160,255,0.3)';
-    ctx.beginPath();ctx.roundRect(O+2,-8,4,3,1);ctx.fill();
-    ctx.fillStyle='rgba(200,230,255,0.5)';
-    ctx.beginPath();ctx.arc(O+4,-6.5,1,0,Math.PI*2);ctx.fill();
-
-    // Handle/grip
-    ctx.fillStyle='#151e2c';ctx.strokeStyle='#1e2e42';ctx.lineWidth=1;
-    ctx.beginPath();ctx.moveTo(O+3,5);ctx.lineTo(O+1,13);ctx.lineTo(O+7,13);ctx.lineTo(O+8,5);ctx.closePath();ctx.fill();ctx.stroke();
-
-    // Bronze bullet tip at barrel end
-    ctx.fillStyle='#b87820';ctx.strokeStyle='#d4940a';ctx.lineWidth=0.8;
-    ctx.beginPath();ctx.roundRect(barrelEnd-3,-2,5,4,0.5);ctx.fill();ctx.stroke();
-    // Tip shine
-    ctx.fillStyle='rgba(255,220,100,0.6)';
-    ctx.beginPath();ctx.roundRect(barrelEnd-2,-1.5,2,1.5,0.3);ctx.fill();
-
-    // Small detail lines on body
-    ctx.strokeStyle='rgba(80,120,160,0.5)';ctx.lineWidth=0.6;
-    ctx.beginPath();ctx.moveTo(O+12,-4);ctx.lineTo(O+12,3);ctx.stroke();
-    ctx.beginPath();ctx.moveTo(O+14,-3);ctx.lineTo(O+14,2);ctx.stroke();
+    // Body panel lines
+    ctx.strokeStyle='rgba(60,100,180,0.4)';ctx.lineWidth=0.5;
+    ctx.beginPath();ctx.moveTo(O+2,-4);ctx.lineTo(O+2,4);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(O+12,-4);ctx.lineTo(O+12,4);ctx.stroke();
+    // Red magazine/accent
+    ctx.fillStyle='#bb1e00';ctx.strokeStyle='#ff2200';ctx.lineWidth=1;
+    ctx.beginPath();ctx.roundRect(O+2,3.5,7,9,1);ctx.fill();ctx.stroke();
+    ctx.fillStyle='rgba(255,80,40,0.55)';ctx.beginPath();ctx.roundRect(O+3,4.5,5,2.5,0.5);ctx.fill();
+    // Futuristic scope — larger, detailed
+    ctx.fillStyle='#1a2a44';ctx.strokeStyle='#2a4488';ctx.lineWidth=1;
+    ctx.beginPath();ctx.roundRect(O,-10,14,6,2);ctx.fill();ctx.stroke();
+    // Scope lens detail
+    const lensGrad=ctx.createRadialGradient(O+7,-7,0,O+7,-7,3.5);
+    lensGrad.addColorStop(0,'rgba(80,160,255,0.5)');lensGrad.addColorStop(1,'rgba(20,60,150,0.2)');
+    ctx.fillStyle=lensGrad;ctx.beginPath();ctx.arc(O+7,-7,3,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#4488cc';ctx.lineWidth=0.8;ctx.beginPath();ctx.arc(O+7,-7,3,0,Math.PI*2);ctx.stroke();
+    // Scope crosshair
+    ctx.globalAlpha=0.5;ctx.strokeStyle='#88ccff';ctx.lineWidth=0.5;
+    ctx.beginPath();ctx.moveTo(O+5,-7);ctx.lineTo(O+9,-7);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(O+7,-9);ctx.lineTo(O+7,-5);ctx.stroke();
+    ctx.globalAlpha=0.95;
+    // Grip/handle
+    ctx.fillStyle='#111820';ctx.strokeStyle='#1e2c40';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(O+3,4.5);ctx.lineTo(O+1,14);ctx.lineTo(O+7,14);ctx.lineTo(O+8,4.5);ctx.closePath();ctx.fill();ctx.stroke();
+    // Bronze tip
+    const tipGrad=ctx.createLinearGradient(barrelEnd-3,0,barrelEnd+3,0);
+    tipGrad.addColorStop(0,'#aa6810');tipGrad.addColorStop(1,'#d4920a');
+    ctx.fillStyle=tipGrad;ctx.strokeStyle='#c88010';ctx.lineWidth=0.8;
+    ctx.beginPath();ctx.roundRect(barrelEnd-2,-2.2,5,4.4,0.5);ctx.fill();ctx.stroke();
+    ctx.fillStyle='rgba(255,230,100,0.55)';ctx.beginPath();ctx.roundRect(barrelEnd-1,-1.5,2,1.5,0.3);ctx.fill();
   }
   ctx.globalAlpha=1;
   ctx.restore();
